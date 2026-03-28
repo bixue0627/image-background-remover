@@ -1,65 +1,146 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useRef } from 'react';
 
 export default function Home() {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [originalPreview, setOriginalPreview] = useState<string | null>(null);
+  const [resultPreview, setResultPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File too large (max 10MB)');
+      return;
+    }
+    setSelectedFile(file);
+    setError('');
+    setResultPreview(null);
+    setOriginalPreview(URL.createObjectURL(file));
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files[0]) {
+      handleFileSelect(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      setError('Please select an image first');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('image', selectedFile);
+
+      const response = await fetch('/api/remove', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to process image');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setResultPreview(url);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to process image');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadResult = () => {
+    if (resultPreview) {
+      const link = document.createElement('a');
+      link.href = resultPreview;
+      link.download = 'result.png';
+      link.click();
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-3xl mx-auto py-12 px-4">
+        <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
+          🖼️ Image Background Remover
+        </h1>
+
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div
+            className="border-2 border-dashed border-gray-300 rounded-lg p-10 text-center cursor-pointer hover:border-gray-500 transition-colors"
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            {originalPreview ? (
+              <img src={originalPreview} alt="Preview" className="max-h-48 mx-auto rounded-lg" />
+            ) : (
+              <>
+                <p className="text-gray-600">Click to upload or drag and drop</p>
+                <p className="text-gray-400 text-sm mt-2">PNG, JPG up to 10MB</p>
+              </>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
+          />
+
+          <button
+            onClick={handleUpload}
+            disabled={loading || !selectedFile}
+            className="w-full mt-4 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
-            Documentation
-          </a>
+            {loading ? 'Processing...' : 'Remove Background'}
+          </button>
+
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          {(originalPreview || resultPreview) && (
+            <div className="mt-6 grid grid-cols-2 gap-4">
+              {originalPreview && (
+                <div>
+                  <p className="text-gray-500 text-sm mb-2">Original</p>
+                  <img src={originalPreview} alt="Original" className="w-full rounded-lg border" />
+                </div>
+              )}
+              {resultPreview && (
+                <div>
+                  <p className="text-gray-500 text-sm mb-2">Result</p>
+                  <div className="bg-[linear-gradient(45deg,#eee_25%,transparent_25%,linear-gradient(-45deg,#eee_25%,transparent_25%,linear-gradient(45deg,transparent_75%,#eee_75%),linear-gradient(-45deg,transparent_75%,#eee_75%)] bg-[length:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0px]">
+                    <img src={resultPreview} alt="Result" className="w-full rounded-lg" />
+                  </div>
+                  <button
+                    onClick={downloadResult}
+                    className="mt-2 w-full bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 transition-colors"
+                  >
+                    Download
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

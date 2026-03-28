@@ -1,7 +1,12 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Enable standalone output for better Cloudflare Pages compatibility
+  output: 'standalone',
+  // Disable image optimization (not needed for this app)
+  images: {
+    unoptimized: true,
+  },
 };
 
 export default nextConfig;
