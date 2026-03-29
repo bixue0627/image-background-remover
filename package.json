@@ -4,7 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "opennextjs-cloudflare build --skipBuild --dangerouslyUseUnsupportedNextVersion",
+    "build:next": "next build",
+    "deploy": "opennextjs-cloudflare deploy",
+    "preview": "wrangler dev",
     "start": "next start",
     "lint": "next lint"
   },
@@ -22,6 +25,8 @@
     "eslint-config-next": "14.2.21",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.78.0",
+    "@opennextjs/cloudflare": "^1.1.0"
   }
 }
