@@ -8,18 +8,6 @@
 		"directory": ".open-next/assets",
 		"binding": "ASSETS"
 	},
-	"services": [
-		{
-			"binding": "WORKER_SELF_REFERENCE",
-			"service": "image-background-remover"
-		}
-	],
-	"r2_buckets": [
-		{
-			"binding": "NEXT_INC_CACHE_R2_BUCKET",
-			"bucket_name": "image-bg-cache"
-		}
-	],
 	"vars": {
 		"REMOVE_BG_API_KEY": "GCXmdDUHYYjgTCMMVdmQVsNB"
 	}
